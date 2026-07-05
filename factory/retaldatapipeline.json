@@ -1,0 +1,15 @@
+{
+	"name": "retaldatapipeline",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "3061369a-39b0-4d82-b9ee-49783305c739",
+		"tenantId": "72fe5434-e33c-4209-822c-89788bc6dd66"
+	}
+}

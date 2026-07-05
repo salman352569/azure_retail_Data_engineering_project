@@ -1,0 +1,103 @@
+{
+	"name": "p1_products_incremental_",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup_get_watermark",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "PostgreSqlV2Source",
+						"query": "SELECT last_load_time \nFROM retail.watermark \nWHERE table_name ='products';",
+						"queryTimeout": "02:00:00"
+					},
+					"dataset": {
+						"referenceName": "ds_pg_products",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "copy_products_incremental",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Lookup_get_watermark",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "PostgreSqlV2Source",
+						"query": {
+							"value": "@concat(\n    'select * from retail.products where updated_at > ''',\n    activity('Lookup_get_watermark').output.firstRow.last_load_time,''''\n)",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_pg_products",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adls_products",
+						"type": "DatasetReference",
+						"parameters": {
+							"directory": {
+								"value": "@concat(\n    'products/load_date=',\n    formatDateTime(utcNow(),'yyyy-MM-dd')\n)",
+								"type": "Expression"
+							},
+							"filename": "products.csv"
+						}
+					}
+				]
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2026-07-01T02:12:19Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
