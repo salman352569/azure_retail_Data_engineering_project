@@ -1,0 +1,103 @@
+{
+	"name": "p1_order_items_incremental",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup_get_watermark",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "PostgreSqlV2Source",
+						"query": "SELECT last_load_time \nFROM retail.watermark \nWHERE table_name ='order_items';",
+						"queryTimeout": "02:00:00"
+					},
+					"dataset": {
+						"referenceName": "ds_pg_customer",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "copy_order_items_incremental",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Lookup_get_watermark",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "PostgreSqlV2Source",
+						"query": {
+							"value": "@concat(\n    'select * from retail.order_items where updated_at > ''',\n    activity('Lookup_get_watermark').output.firstRow.last_load_time,''''\n)",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_pg_order_items",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_adls_order_items",
+						"type": "DatasetReference",
+						"parameters": {
+							"directory": {
+								"value": "@concat(\n    'order_items/load_date=',\n    formatDateTime(utcNow(),'yyyy-MM-dd')\n)",
+								"type": "Expression"
+							},
+							"filename": "order_items.csv"
+						}
+					}
+				]
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2026-07-02T12:59:24Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

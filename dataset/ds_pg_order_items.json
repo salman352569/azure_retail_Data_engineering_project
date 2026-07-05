@@ -1,0 +1,17 @@
+{
+	"name": "ds_pg_order_items",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "PostgreSql1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "PostgreSqlV2Table",
+		"schema": [],
+		"typeProperties": {
+			"schema": "retail",
+			"table": "order_items"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
